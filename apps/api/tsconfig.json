@@ -1,0 +1,9 @@
+{
+  "extends": "@workspace/tsconfig/base.json",
+  "compilerOptions": {
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "outDir": "dist"
+  },
+  "include": ["src", "test", "prisma"]
+}

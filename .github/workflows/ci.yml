@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @workspace/api exec prisma generate
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+
+  e2e:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: app
+          POSTGRES_DB: app_test
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U app" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      NODE_ENV: test
+      APP_PORT: 3000
+      CORS_ORIGIN: http://localhost:5173
+      DATABASE_URL: postgresql://app:app@localhost:5433/app_test
+      DB_TEST_HOST: localhost
+      DB_TEST_PORT: "5433"
+      DB_TEST_USER: app
+      DB_TEST_PASSWORD: app
+      DB_TEST_NAME: app_test
+      REDIS_HOST: localhost
+      REDIS_PORT: "6379"
+      JWT_ACCESS_SECRET: change-me-32-bytes-minimum-secret-value
+      REFRESH_TOKEN_PEPPER: change-me-refresh-pepper
+      SUPER_ADMIN_EMAIL: admin@app.local
+      SUPER_ADMIN_PASSWORD: ChangeMe123!
+      SMTP_HOST: localhost
+      SMTP_PORT: "1025"
+      SMTP_FROM: noreply@app.local
+      LOG_LEVEL: silent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: cd apps/api && pnpm exec prisma migrate deploy
+      - run: pnpm --filter @workspace/api test:e2e

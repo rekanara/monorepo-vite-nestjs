@@ -1,0 +1,51 @@
+{
+  "name": "monorepo-fullstack",
+  "version": "0.0.1",
+  "private": true,
+  "license": "MIT",
+  "packageManager": "pnpm@10.33.2",
+  "engines": {
+    "node": ">=20.19",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "format": "turbo format",
+    "typecheck": "turbo typecheck",
+    "test": "turbo test",
+    "smoke": "scripts/smoke.sh",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.6.0",
+    "nodemon": "^3.1.14",
+    "prettier": "^3.9.9",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "turbo": "^2.11.7",
+    "typescript": "~6.0.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "@prisma/client",
+      "@prisma/engines",
+      "@swc/core",
+      "argon2",
+      "esbuild",
+      "prisma"
+    ],
+    "overrides": {
+      "multer@<2.5.0": "^2.5.0",
+      "body-parser@>=2.0.0 <2.4.0": "^2.4.0",
+      "undici@>=7.18.0 <7.30.1": "^7.30.1",
+      "deepmerge-ts@<8.0.0": "^8.0.0",
+      "fast-uri@>=3.0.0 <3.1.9": "^3.1.9",
+      "js-yaml@<5.4.1": "^5.4.1",
+      "ip-address@<10.7.4": "^10.7.4"
+    }
+  }
+}

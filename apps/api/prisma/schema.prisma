@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id          String           @id
+  name        String           @unique
+  description String?
+  isSystem    Boolean          @default(false) @map("is_system")
+  requireTwoFactor Boolean     @default(false) @map("require_two_factor")
+  permissions RolePermission[]
+  users       User[]
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@map("role")
+}
+
+model Permission {
+  id          String   @id
+  resource    String
+  action      String
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([resource, action])
+  @@map("permission")
+}
+
+model RolePermission {
+  id        String   @id
+  roleId    String   @map("role_id")
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  resource  String
+  action    String
+  scope     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([roleId, resource, action])
+  @@map("role_permission")
+}
+
+model User {
+  id                   String               @id
+  roleId               String               @map("role_id")
+  role                 Role                 @relation(fields: [roleId], references: [id])
+  email                String               @unique
+  fullName             String?              @map("full_name")
+  passwordHash         String?              @map("password_hash")
+  avatarKey            String?              @map("avatar_key")
+  isActive             Boolean              @default(true) @map("is_active")
+  emailVerifiedAt      DateTime?            @map("email_verified_at") @db.Timestamptz(3)
+  deletedAt            DateTime?            @map("deleted_at") @db.Timestamptz(3)
+  notificationPushEnabled  Boolean          @default(true) @map("notification_push_enabled")
+  lastLoginAt          DateTime?            @map("last_login_at") @db.Timestamptz(3)
+  createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  refreshTokenFamilies RefreshTokenFamily[]
+  userTokens           UserToken[]
+  fcmDevices           FcmDevice[]
+  notifications        Notification[]
+  attachments          Attachment[]
+  announcements        Announcement[]
+  twoFactor           UserTwoFactor?
+  backupCodes         UserBackupCode[]
+
+  @@map("user")
+}
+
+model UserBackupCode {
+  id        String    @id
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String    @map("code_hash")
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([userId])
+  @@map("user_backup_code")
+}
+
+model UserTwoFactor {
+  userId          String    @id @map("user_id")
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  secretEncrypted String    @map("secret_encrypted")
+  enabledAt       DateTime? @map("enabled_at") @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("user_two_factor")
+}
+
+model RefreshTokenFamily {
+  id        String         @id
+  userId    String         @map("user_id")
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent String?        @map("user_agent")
+  ipAddress String?        @map("ip_address")
+  revokedAt DateTime?      @map("revoked_at") @db.Timestamptz(3)
+  createdAt DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  tokens    RefreshToken[]
+
+  @@map("refresh_token_family")
+}
+
+model RefreshToken {
+  id                  String             @id
+  familyId            String             @map("family_id")
+  family              RefreshTokenFamily @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  tokenHash           String             @unique @map("token_hash")
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  expiresAt           DateTime           @map("expires_at") @db.Timestamptz(3)
+  usedAt              DateTime?          @map("used_at") @db.Timestamptz(3)
+  replacedByTokenHash String?            @map("replaced_by_token_hash")
+
+  @@map("refresh_token")
+}
+
+model UserToken {
+  id        String    @id
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purpose   String
+  channel   String
+  tokenHash String    @unique @map("token_hash")
+  attempts  Int       @default(0)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(3)
+  usedAt    DateTime? @map("used_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([userId, purpose, channel, usedAt, expiresAt])
+  @@map("user_token")
+}
+
+
+
+model Announcement {
+  id          String    @id
+  title       String
+  content     String
+  imageUrl    String?   @map("image_url")
+  isPinned    Boolean   @default(false) @map("is_pinned")
+  status      String    @default("published")
+  publishedAt DateTime? @map("published_at") @db.Timestamptz(3)
+  notifiedAt  DateTime? @map("notified_at") @db.Timestamptz(3)
+  authorId    String    @map("author_id")
+  author      User      @relation(fields: [authorId], references: [id])
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([status, isPinned, publishedAt, createdAt])
+  @@map("announcement")
+}
+
+model Attachment {
+  id          String   @id
+  ownerUserId String   @map("owner_user_id")
+  owner       User     @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+  key         String   @unique
+  filename    String
+  contentType String   @map("content_type")
+  size        Int
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([ownerUserId, createdAt])
+  @@map("attachment")
+}
+
+model FcmDevice {
+  id        String   @id
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId  String   @map("device_id")
+  token     String   @unique
+  device    Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([userId, deviceId])
+  @@map("fcm_device")
+}
+
+model Notification {
+  id        String    @id
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  data      Json      @default("{}")
+  dedupeKey String    @map("dedupe_key")
+  readAt    DateTime? @map("read_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, readAt, createdAt])
+  @@map("notification")
+}
+
+model AuditLog {
+  id          String   @id
+  actorUserId String?  @map("actor_user_id")
+  action      String
+  entityType  String   @map("entity_type")
+  entityId    String   @map("entity_id")
+  before      Json?
+  after       Json?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+model AppSetting {
+  id        String   @id
+  value     Json     @default("{}")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@map("app_setting")
+}
+
+model ApiKey {
+  id        String    @id
+  name      String
+  prefix    String
+  keyHash   String    @unique @map("key_hash")
+  isActive  Boolean   @default(true) @map("is_active")
+  lastUsedAt DateTime? @map("last_used_at") @db.Timestamptz(3)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@map("api_key")
+}
+
+model WebhookEvent {
+  id          String    @id
+  provider    String
+  eventKey    String    @map("event_key")
+  eventType   String    @map("event_type")
+  payload     Json
+  status      String    @default("received")
+  error       String?
+  receivedAt  DateTime  @default(now()) @map("received_at") @db.Timestamptz(3)
+  processedAt DateTime? @map("processed_at") @db.Timestamptz(3)
+
+  @@unique([provider, eventKey])
+  @@index([provider, receivedAt])
+  @@map("webhook_event")
+}

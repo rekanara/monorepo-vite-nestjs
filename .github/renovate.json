@@ -1,0 +1,17 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":dependencyDashboard"],
+  "packageRules": [
+    {
+      "matchManagers": ["npm"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm minor and patch"
+    },
+    {
+      "matchPackageNames": ["typescript", "vite", "prisma", "@prisma/client"],
+      "separateMinorPatch": true
+    }
+  ],
+  "rangeStrategy": "bump",
+  "timezone": "Asia/Jakarta"
+}
